@@ -26,56 +26,74 @@ app.get("/stats", (req, res) => {
   res.sendFile(path.join(__dirname + "/public/stats.html"));
 });
 
+app.post("/api/workouts", (req, res) => {
+  db.Workout.create({})
+    .then((dbWorkout) => {
+      res.json(dbWorkout);
+    })
+    .catch(({ message }) => {
+      console.log(message);
+    });
+});
 
-// db.User.create({ name: "Ernest Hemingway" })
-//   .then(dbUser => {
-//     console.log(dbUser);
-//   })
-//   .catch(({ message }) => {
-//     console.log(message);
-//   });
+app.put("/api/workouts/:id", ({ params, body }, res) => {
+  console.log("PARAMS", body, params);
 
-// app.get("/notes", (req, res) => {
-//   db.Note.find({})
-//     .then(dbNote => {
-//       res.json(dbNote);
-//     })
-//     .catch(err => {
-//       res.json(err);
-//     });
-// });
+  db.Workout.findOneAndUpdate(
+    { _id: params.id },
+    { $push: { exercises: body } },
+    { new: true }
+  )
+    .then((dbWorkout) => {
+      res.json(dbWorkout);
+    })
+    .catch((err) => {
+      res.json(err);
+    });
+});
 
-// app.get("/user", (req, res) => {
-//   db.User.find({})
-//     .then(dbUser => {
-//       res.json(dbUser);
-//     })
-//     .catch(err => {
-//       res.json(err);
-//     });
-// });
+app.put("/api/workouts/:id",({body,params},res)=>{   
+  Workout.findByIdAndUpdate(  
+   params.id,
+   {$push: { exercises:body } },
+   {new: true, runValidators: true }
+  )
+  .then(data => res.json(data))
+  .catch(err => { 
+      res.json(err)
+  })
+});
 
-// app.post("/submit", ({ body }, res) => {
-//   db.Note.create(body)
-//     .then(({ _id }) => db.User.findOneAndUpdate({}, { $push: { notes: _id } }, { new: true }))
-//     .then(dbUser => {
-//       res.json(dbUser);
-//     })
-//     .catch(err => {
-//       res.json(err);
-//     });
-// });
+app.get("/api/workouts", (req, res) => {
+	db.Workout.aggregate([
+		{
+			$addFields: {
+				totalDuration: { $sum: "$exercises.duration" },
+			},
+		},
+	])
+		.then((dbWorkouts) => {
+			res.json(dbWorkouts);
+		})
+		.catch((err) => {
+			res.json(err);
+		});
+});
 
-// app.get("/populateduser", (req, res) => {
-//   db.User.find({})
-//     .populate("notes")
-//     .then(dbUser => {
-//       res.json(dbUser);
-//     })
-//     .catch(err => {
-//       res.json(err);
-//     });
-// });
+app.get("/api/workouts/range", function (req, res) {
+	db.Workout.aggregate([
+		{
+			$addFields: {
+				totalDuration: { $sum: "$exercises.duration" },
+				dateDifference: {
+					$subtract: [new Date(), "$day"],
+				},
+			},
+		},
+	]).then(function (dbWorkouts) {
+		res.json(dbWorkouts);
+	});
+});
 
 app.listen(PORT, () => {
   console.log(`App running on port ${PORT}!`);
